@@ -54,7 +54,26 @@
     <div class="container mx-auto px-4 py-8">
         <header class="mb-8 text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2">Hayagriva Converter</h1>
-            <p class="text-gray-600">Convert unstructured citations to structured formats</p>
+            <p class="text-gray-600 mb-4">Convert unstructured citations to structured formats</p>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-3xl mx-auto text-left">
+                <h2 class="text-lg font-semibold text-blue-800 mb-2">How to Use This Tool</h2>
+                <p class="text-gray-700 mb-2">
+                    This tool converts academic citations from plain text into structured formats using AI.
+                    Simply paste your reference list and click "Convert to Hayagriva".
+                </p>
+                <p class="text-gray-700 mb-2">
+                    <strong>Supported citation formats:</strong>
+                    Numbered references (e.g., "1. Author, Title..."),
+                    author-date format (e.g., "Smith (2020). Title..."),
+                    academic journal citations, and references with URLs.
+                </p>
+                <p class="text-gray-700">
+                    <strong>Output formats:</strong>
+                    Hayagriva YAML (default), BibTeX, CSL-JSON, and RIS.
+                    You can also format references in various citation styles.
+                </p>
+            </div>
         </header>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
@@ -67,13 +86,19 @@
                         <button id="uploadBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Upload File</button>
                     </div>
                 </div>
-                <textarea id="inputText" class="w-full h-64 p-4 border border-gray-300 rounded resize-none" placeholder="Paste your citation text here or upload a file..."></textarea>
+                <textarea id="inputText" class="w-full h-64 p-4 border border-gray-300 rounded resize-none" placeholder="Paste your citation text here or upload a file...
+
+Example:
+1. Smith, J. (2020). The impact of climate change on coastal ecosystems. Journal of Environmental Science, 45(2), 112-128. https://doi.org/10.1234/jes.2020.45.2.112
+
+2. Johnson, A., & Williams, B. (2019). Renewable energy solutions for urban areas. Sustainable Cities and Society, 38, 157-165."></textarea>
             </div>
 
             <div class="text-center">
                 <button id="convertBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium">
                     Convert to Hayagriva
                 </button>
+                <p class="text-sm text-gray-500 mt-2">Processing may take a few minutes depending on the number of references.</p>
                 <div id="progress" class="progress-container">
                     <div class="progress-bar">
                         <div id="progressFill" class="progress-fill"></div>
@@ -128,6 +153,11 @@
                 <pre id="convertedText" class="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm"></pre>
             </div>
         </div>
+
+        <footer class="text-center text-gray-500 text-sm py-6">
+            <p>Hayagriva Converter uses AI to transform citation text into structured formats.</p>
+            <p class="mt-1">Powered by <a href="https://github.com/typst/hayagriva" class="text-blue-600 hover:underline" target="_blank">Hayagriva</a> - a modern bibliography management tool.</p>
+        </footer>
     </div>
 
     <script>

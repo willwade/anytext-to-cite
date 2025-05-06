@@ -9,6 +9,7 @@ import yaml  # type: ignore
 import re
 import uuid
 import time
+import asyncio
 from functools import wraps
 from pathlib import Path
 from enum import Enum
@@ -768,13 +769,17 @@ async def format_references(request: dict):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+# Define batch size for processing references
+BATCH_SIZE = 10  # Process 10 references at a time
+
+
 @app.post("/api/convert-to-hayagriva")
 async def convert_to_hayagriva(input: TextInput):
     """
     Convert unstructured citation text to Hayagriva YAML format.
 
     This endpoint takes raw text containing citations and converts them to structured
-    Hayagriva YAML format using an LLM.
+    Hayagriva YAML format using an LLM with batch processing.
     """
     try:
         # Reset progress tracker
@@ -795,26 +800,18 @@ async def convert_to_hayagriva(input: TextInput):
         # Update progress tracker
         conversion_progress["status"] = "processing"
         conversion_progress["total"] = total_refs
-        conversion_progress["message"] = f"Processing {total_refs} references..."
+        conversion_progress["message"] = (
+            f"Processing {total_refs} references in batches..."
+        )
 
-        # Process each reference
+        # Process references in batches
         hayagriva_yaml_entries = []
         combined_yaml = ""
 
-        for i, ref in enumerate(references):
-            # Update progress
-            current = i + 1
-            conversion_progress["current"] = current
-            conversion_progress["message"] = (
-                f"Processing reference {current}/{total_refs}"
-            )
-            # Print progress update for debugging
-            print(f"Processing reference {current}/{total_refs}")
-            print(f"Progress data: {conversion_progress}")
-
-            # Skip empty references
+        # Define the function to process a single reference
+        async def process_reference(i, ref):
             if not ref.strip():
-                continue
+                return None
 
             # Generate a key for this reference
             ref_key = f"ref_{i+1}"
@@ -858,7 +855,7 @@ Provide ONLY the YAML output with the key, no explanations or other text."""
                     if "429" in str(llm_error) or "quota" in str(llm_error).lower():
                         print(f"Rate limit or quota exceeded: {str(llm_error)}")
                         # Minimal delay for Gemma 3 27B
-                        time.sleep(0.5)
+                        await asyncio.sleep(0.5)
                         # Try again with a simpler prompt
                         simplified_prompt = f"Convert this citation to Hayagriva YAML format:\n\n{ref}\n\nYAML:"
                         try:
@@ -871,11 +868,6 @@ Provide ONLY the YAML output with the key, no explanations or other text."""
 
                 # Basic validation - check if it looks like YAML
                 is_valid = yaml_text.startswith("{") or ":" in yaml_text
-
-                # Add to results
-                hayagriva_yaml_entries.append(
-                    {"original": ref, "yaml": yaml_text, "valid": is_valid}
-                )
 
                 # Clean up the YAML text - remove any markdown code blocks or extra formatting
                 yaml_text = yaml_text.replace("```yaml", "").replace("```", "").strip()
@@ -898,17 +890,58 @@ Provide ONLY the YAML output with the key, no explanations or other text."""
                     # Add our key and proper indentation
                     yaml_text = f"{ref_key}:\n" + "  " + yaml_text.replace("\n", "\n  ")
 
-                # Add to combined YAML
-                combined_yaml += yaml_text + "\n\n"
+                return {
+                    "index": i,
+                    "original": ref,
+                    "yaml": yaml_text,
+                    "valid": is_valid,
+                    "processed_yaml": yaml_text + "\n\n",
+                }
             except Exception as ref_error:
                 print(f"Error processing reference {i+1}: {str(ref_error)}")
+                return {
+                    "index": i,
+                    "original": ref,
+                    "yaml": f"# Error: {str(ref_error)}",
+                    "valid": False,
+                    "processed_yaml": f"# Error processing reference {i+1}: {str(ref_error)}\n\n",
+                }
+
+        # Process references in batches
+        for batch_start in range(0, len(references), BATCH_SIZE):
+            batch_end = min(batch_start + BATCH_SIZE, len(references))
+
+            # Create tasks for each reference in the batch
+            tasks = []
+            for i in range(batch_start, batch_end):
+                tasks.append(process_reference(i, references[i]))
+
+            # Process the batch concurrently
+            batch_results = await asyncio.gather(*tasks)
+
+            # Filter out None results (empty references)
+            batch_results = [r for r in batch_results if r is not None]
+
+            # Add results to the overall list
+            for result in batch_results:
                 hayagriva_yaml_entries.append(
                     {
-                        "original": ref,
-                        "yaml": f"# Error: {str(ref_error)}",
-                        "valid": False,
+                        "original": result["original"],
+                        "yaml": result["yaml"],
+                        "valid": result["valid"],
                     }
                 )
+                combined_yaml += result["processed_yaml"]
+
+            # Update progress
+            conversion_progress["current"] = batch_end
+            conversion_progress["message"] = (
+                f"Processed {batch_end}/{total_refs} references"
+            )
+            print(
+                f"Processed batch {batch_start}-{batch_end} of {total_refs} references"
+            )
+            print(f"Progress data: {conversion_progress}")
 
         if not hayagriva_yaml_entries:
             raise ValueError("No valid references could be processed")
