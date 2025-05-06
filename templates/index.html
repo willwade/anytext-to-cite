@@ -500,12 +500,13 @@
                     pollProgress();
 
                     // Use a recursive setTimeout approach instead of setInterval for more reliable polling
+                    // With faster polling for Gemma 3 27B model
                     function setupPolling() {
                         if (isProcessing) {
                             setTimeout(() => {
                                 pollProgress();
                                 setupPolling(); // Set up the next poll
-                            }, 500);
+                            }, 200); // Faster polling for Gemma 3 27B model
                         }
                     }
 
@@ -530,8 +531,10 @@
                     window.simpleInterval = setInterval(() => {
                         simpleCounter++;
                         // Create a message that shows both elapsed time and a fake progress percentage
-                        const fakeProgress = Math.min(95, Math.round(simpleCounter / 3)); // Max 95% to leave room for completion
-                        const counterMessage = `Processing... (${simpleCounter}s elapsed, ~${fakeProgress}%)`;
+                        // Adjust for the faster update rate (0.5s instead of 1s)
+                        const elapsedSeconds = Math.floor(simpleCounter * 0.5);
+                        const fakeProgress = Math.min(95, Math.round(simpleCounter / 6)); // Max 95% to leave room for completion
+                        const counterMessage = `Processing... (${elapsedSeconds}s elapsed, ~${fakeProgress}%)`;
                         console.log('Simple counter update:', counterMessage);
 
                         // Also update the progress bar
@@ -561,7 +564,7 @@
                             clearInterval(window.simpleInterval);
                             window.simpleInterval = null;
                         }
-                    }, 1000);
+                    }, 500); // Faster updates for Gemma 3 27B model
 
                     // Make sure progress is visible
                     progress.classList.remove('hidden');

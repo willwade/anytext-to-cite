@@ -100,32 +100,37 @@ if model is None:
         # Set a flag to show an error message in the UI
         model_load_error = True
 
-# Rate limiting configuration
+# Rate limiting configuration - relaxed for Gemma 3 27B model
 RATE_LIMIT = {
-    "requests_per_minute": 60,  # Maximum requests per minute
+    "requests_per_minute": 300,  # Maximum requests per minute - increased for Gemma 3 27B
     "request_timestamps": [],  # Timestamps of recent requests
 }
 
 
 def rate_limited_api_call(func):
-    """Decorator to apply rate limiting to API calls"""
+    """Decorator to apply rate limiting to API calls - optimized for Gemma 3 27B"""
 
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # Clean up old timestamps (older than 1 minute)
+        # For Gemma 3 27B, we can be more lenient with rate limiting
+        # Only apply rate limiting if we're getting close to the limit
         current_time = time.time()
+
+        # Clean up old timestamps (older than 1 minute)
         RATE_LIMIT["request_timestamps"] = [
             ts for ts in RATE_LIMIT["request_timestamps"] if current_time - ts < 60
         ]
 
-        # Check if we've exceeded the rate limit
-        if len(RATE_LIMIT["request_timestamps"]) >= RATE_LIMIT["requests_per_minute"]:
+        # Only check if we're getting close to the limit
+        if len(RATE_LIMIT["request_timestamps"]) >= (
+            RATE_LIMIT["requests_per_minute"] * 0.9
+        ):
             # Calculate time to wait
             oldest_timestamp = min(RATE_LIMIT["request_timestamps"])
             wait_time = 60 - (current_time - oldest_timestamp)
 
             if wait_time > 0:
-                print(f"Rate limit reached. Waiting {wait_time:.2f} seconds...")
+                print(f"Rate limit approaching. Waiting {wait_time:.2f} seconds...")
                 time.sleep(wait_time)
 
         # Add current timestamp to the list
@@ -839,20 +844,21 @@ Here's the citation to convert:
 Provide ONLY the YAML output with the key, no explanations or other text."""
 
             try:
-                # Apply rate limiting to LLM calls
+                # Apply rate limiting to LLM calls - optimized for Gemma 3 27B
                 @rate_limited_api_call
                 def call_llm(prompt_text):
                     return model.prompt(prompt_text)
 
-                # Call the LLM with rate limiting
+                # Call the LLM with optimized rate limiting
                 try:
+                    # For Gemma 3 27B, we can directly call the model without much delay
                     response = call_llm(prompt)
                     yaml_text = response.text().strip()
                 except Exception as llm_error:
                     if "429" in str(llm_error) or "quota" in str(llm_error).lower():
                         print(f"Rate limit or quota exceeded: {str(llm_error)}")
-                        # Add a longer delay for quota errors
-                        time.sleep(2)
+                        # Minimal delay for Gemma 3 27B
+                        time.sleep(0.5)
                         # Try again with a simpler prompt
                         simplified_prompt = f"Convert this citation to Hayagriva YAML format:\n\n{ref}\n\nYAML:"
                         try:
