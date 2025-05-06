@@ -1,0 +1,42 @@
+/* Additional custom styles */
+.fade-in {
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.citation-card {
+  transition: all 0.3s ease;
+}
+
+.citation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.code-block {
+  font-family: 'Courier New', Courier, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-valid {
+  background-color: #DEF7EC;
+  color: #03543E;
+}
+
+.status-invalid {
+  background-color: #FDE8E8;
+  color: #9B1C1C;
+}

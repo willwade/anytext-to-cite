@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hayagriva Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.4"></script>
+    <style>
+        .progress-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 20px auto;
+            display: none;
+            text-align: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .progress-bar {
+            height: 12px;
+            background-color: #f3f3f3;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4299e1; /* Brighter blue */
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 6px;
+            background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
+            background-size: 1rem 1rem;
+        }
+        .progress-status {
+            font-size: 16px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        .progress-detail {
+            font-size: 14px;
+            color: #4a5568;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Hayagriva Converter</h1>
+            <p class="text-gray-600">Convert unstructured citations to structured formats</p>
+        </header>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-4">Input</h2>
+                <div class="flex mb-4">
+                    <button id="pasteBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mr-2">Paste Text</button>
+                    <div class="relative">
+                        <input type="file" id="fileInput" class="hidden" accept=".txt" />
+                        <button id="uploadBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Upload File</button>
+                    </div>
+                </div>
+                <textarea id="inputText" class="w-full h-64 p-4 border border-gray-300 rounded resize-none" placeholder="Paste your citation text here or upload a file..."></textarea>
+            </div>
+
+            <div class="text-center">
+                <button id="convertBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium">
+                    Convert to Hayagriva
+                </button>
+                <div id="progress" class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="progressDetail" class="progress-detail">Initializing...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="results" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
+            <h2 class="text-xl font-semibold mb-4">Results</h2>
+            
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-medium">Hayagriva YAML</h3>
+                    <button id="copyYamlBtn" class="text-blue-600 hover:text-blue-800">Copy</button>
+                </div>
+                <pre id="yamlOutput" class="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+            </div>
+            
+            <div id="citation-style-container" class="mb-4 hidden">
+                <label for="citation-style" class="block text-sm font-medium text-gray-700">Format references in citation style:</label>
+                <div class="flex items-center space-x-2">
+                    <select id="citation-style" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Select a style...</option>
+                        <!-- Citation styles will be loaded here -->
+                    </select>
+                    <button id="format-btn" class="mt-1 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                        Format
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <label for="formatSelect" class="block text-sm font-medium text-gray-700 mb-1">Export as technical format:</label>
+                <div class="flex">
+                    <select id="formatSelect" class="border border-gray-300 rounded-l px-3 py-2 flex-grow">
+                        <option value="yaml">Hayagriva YAML</option>
+                        <option value="bibtex">BibTeX</option>
+                        <option value="csl-json">CSL-JSON</option>
+                        <option value="ris">RIS</option>
+                    </select>
+                    <button id="exportBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r">Export</button>
+                </div>
+            </div>
+            
+            <div id="convertedOutput" class="hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 id="convertedFormatTitle" class="text-lg font-medium">Converted Format</h3>
+                    <button id="copyConvertedBtn" class="text-blue-600 hover:text-blue-800">Copy</button>
+                </div>
+                <pre id="convertedText" class="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // UI Elements
+            const convertBtn = document.getElementById('convertBtn');
+            const inputText = document.getElementById('inputText');
+            const yamlOutput = document.getElementById('yamlOutput');
+            const outputArea = document.getElementById('outputArea');
+            const convertedOutput = document.getElementById('convertedOutput');
+            
+            // Progress elements
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            // Format and export elements
+            const formatSelect = document.getElementById('formatSelect');
+            const exportBtn = document.getElementById('exportBtn');
+            const copyYamlBtn = document.getElementById('copyYamlBtn');
+            const copyConvertedBtn = document.getElementById('copyConvertedBtn');
+            
+            // Citation style elements
+            const citationStyleContainer = document.getElementById('citation-style-container');
+            const citationStyleSelect = document.getElementById('citation-style');
+            const formatStyleBtn = document.getElementById('format-btn');
+            
+            // Progress tracking variables
+            let progressInterval = null;
+            let taskId = null;
+            let yamlContent = null;
+            
+            // Function to load available citation styles
+            function loadCitationStyles() {
+                fetch('/api/citation-styles')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Clear existing options except the first one
+                        while (citationStyleSelect.options.length > 1) {
+                            citationStyleSelect.remove(1);
+                        }
+                        
+                        // Add new options
+                        data.styles.forEach(style => {
+                            const option = document.createElement('option');
+                            option.value = style;
+                            option.textContent = style.replace(/-/g, ' ');
+                            citationStyleSelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading citation styles:', error);
+                    });
+            }
+            
+            // Function to format references in selected citation style
+            function formatReferences() {
+                const style = citationStyleSelect.value;
+                if (!yamlContent || !style) {
+                    alert('Please select a citation style and ensure YAML content is available');
+                    return;
+                }
+                
+                // Show loading state
+                formatStyleBtn.disabled = true;
+                formatStyleBtn.textContent = 'Formatting...';
+                
+                fetch('/api/format-references', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        yaml_content: yamlContent,
+                        style: style
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.detail || 'Error formatting references'); });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Display formatted references
+                    yamlOutput.textContent = data.formatted_references;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error formatting references: ' + error.message);
+                })
+                .finally(() => {
+                    // Reset button state
+                    formatStyleBtn.disabled = false;
+                    formatStyleBtn.textContent = 'Format';
+                });
+            }
+            
+            // Add event listener for the format button
+            formatStyleBtn.addEventListener('click', formatReferences);
+            
+            // Function to update progress UI
+            function updateProgressUI(progressData) {
+                // Calculate percentage
+                let percent = 0;
+                if (progressData.total > 0) {
+                    percent = Math.round((progressData.current / progressData.total) * 100);
+                }
+                
+                // Update UI elements
+                progressFill.style.width = `${percent}%`;
+                
+                // Make sure progress message is clearly displayed
+                const message = progressData.message || 
+                    `Processing ${progressData.current} of ${progressData.total} citations`;
+                progressDetail.textContent = message;
+                
+                // Log for debugging
+                console.log('Progress update:', progressData, 'Element:', progressDetail, 'Message:', message);
+                
+                // Force the progress to be visible
+                progress.style.display = 'block';
+                
+                // If complete, stop polling
+                if (progressData.status === 'complete') {
+                    clearInterval(progressInterval);
+                    isProcessing = false;
+                }
+            }
+            
+            // Variables for backoff strategy
+            let retryCount = 0;
+            const maxRetries = 5;
+            const baseDelay = 1000; // 1 second base delay
+            
+            // Function to poll progress with exponential backoff
+            function pollProgress() {
+                // Simple fetch without timeout to avoid AbortError
+                fetch('/api/progress', { 
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    // Reset retry count on success
+                    retryCount = 0;
+                    return response.json();
+                })
+                .then(progressData => {
+                    // Only update if we have valid data
+                    if (progressData && typeof progressData === 'object') {
+                        updateProgressUI(progressData);
+                        
+                        // If processing is complete, stop polling
+                        if (progressData.status === 'complete') {
+                            clearInterval(progressInterval);
+                            isProcessing = false;
+                        }
+                    }
+                })
+                .catch(error => {
+                    // Implement exponential backoff
+                    retryCount++;
+                    
+                    // Calculate delay with exponential backoff
+                    const delay = Math.min(baseDelay * Math.pow(2, retryCount), 10000); // Max 10 seconds
+                    
+                    // Update UI with a waiting message
+                    const progressDetail = document.getElementById('progressDetail');
+                    if (progressDetail) {
+                        progressDetail.textContent = `Processing citations... (retrying in ${delay/1000}s)`;
+                    }
+                    
+                    // Clear existing interval
+                    clearInterval(progressInterval);
+                    
+                    // Only retry if we haven't exceeded max retries
+                    if (retryCount <= maxRetries && isProcessing) {
+                        console.log(`Retry ${retryCount}/${maxRetries} in ${delay}ms`);
+                        progressInterval = setTimeout(pollProgress, delay);
+                    } else if (isProcessing) {
+                        // If max retries exceeded, show a message but keep trying with a longer interval
+                        console.log('Max retries exceeded, continuing with longer interval');
+                        progressInterval = setTimeout(pollProgress, 5000); // Try every 5 seconds
+                    }
+                });
+            }
+            // Handle file upload
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            inputText.value = data.content;
+                        } else {
+                            alert('Error uploading file');
+                        }
+                    } catch (err) {
+                        alert('Error: ' + err.message);
+                    }
+                }
+            });
+            
+            // Handle convert button
+            convertBtn.addEventListener('click', async () => {
+                const text = inputText.value.trim();
+                if (!text) {
+                    alert('Please enter some text or upload a file');
+                    return;
+                }
+                
+                // Show progress indicator
+                progress.style.display = 'block';
+                progressFill.style.width = '10%';
+                progressDetail.textContent = 'Sending request to server...';
+                results.classList.add('hidden');
+                
+                try {
+                    console.log('Sending text to API:', text);
+                    
+                    // Start polling progress
+                    isProcessing = true;
+                    retryCount = 0; // Reset retry count
+                    clearInterval(progressInterval); // Clear any existing interval
+                    // Start polling immediately
+                    pollProgress();
+                    
+                    // Initial progress state
+                    progressFill.style.width = '5%';
+                    progressDetail.textContent = 'Starting conversion process...';
+                    
+                    // Make sure progress is visible
+                    progress.classList.remove('hidden');
+                    progress.style.display = 'block';
+                    
+                    const response = await fetch('/api/convert-to-hayagriva', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ text })
+                    });
+                    
+                    progressFill.style.width = '50%';
+                    progressDetail.textContent = 'Processing server response...';
+                    
+                    if (response.ok) {
+                        progressFill.style.width = '80%';
+                        progressDetail.textContent = 'Formatting results...';
+                        
+                        const data = await response.json();
+                        console.log('API response:', data);
+                        yamlOutput.textContent = data.yaml;
+                        
+                        // Make the results section visible
+                        results.classList.remove('hidden');
+                        
+                        // Store the YAML content for later use
+                        yamlContent = data.yaml;
+                        
+                        // Show citation style container and load styles
+                        citationStyleContainer.classList.remove('hidden');
+                        loadCitationStyles();
+                        
+                        progressFill.style.width = '100%';
+                        progressDetail.textContent = `Complete! Processed ${data.count || data.entries?.length || 0} citations.`;
+                        
+                        // Short delay to show the completed progress
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        progressFill.style.width = '100%';
+                        progressDetail.textContent = 'Error occurred';
+                        progressFill.style.backgroundColor = '#e74c3c';
+                        
+                        const errorData = await response.json();
+                        console.error('API error:', errorData);
+                        alert('Error converting text: ' + (errorData.detail || 'Unknown error'));
+                    }
+                } catch (err) {
+                    progressFill.style.width = '100%';
+                    progressDetail.textContent = 'Error: ' + err.message;
+                    progressFill.style.backgroundColor = '#e74c3c';
+                    
+                    console.error('Request error:', err);
+                    alert('Error: ' + err.message);
+                } finally {
+                    // Stop polling progress
+                    clearInterval(progressInterval);
+                    isProcessing = false;
+                    
+                    // Complete the progress bar for visual feedback
+                    progressFill.style.width = '100%';
+                    progressDetail.textContent = 'Completed';
+                    
+                    // Short delay before hiding progress
+                    setTimeout(() => {
+                        progress.style.display = 'none';
+                    }, 500);
+                }
+            });
+            
+            // Handle export button
+            exportBtn.addEventListener('click', async () => {
+                const format = formatSelect.value;
+                const yamlContent = yamlOutput.textContent;
+                
+                if (!yamlContent) {
+                    alert('No YAML content to convert');
+                    return;
+                }
+                
+                if (format === 'yaml') {
+                    // Just download the YAML directly
+                    downloadText(yamlContent, 'references.yaml');
+                    return;
+                }
+                
+                progress.style.display = 'block';
+                progressFill.style.width = '30%';
+                progressDetail.textContent = 'Converting format...';
+                
+                try {
+                    const response = await fetch('/api/convert-format', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            yaml_content: yamlContent,
+                            output_format: format
+                        })
+                    });
+                    
+                    progressFill.style.width = '70%';
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        convertedText.textContent = data.converted_content;
+                        convertedFormatTitle.textContent = `Converted to ${format.toUpperCase()}`;
+                        convertedOutput.classList.remove('hidden');
+                        
+                        progressFill.style.width = '100%';
+                        progressDetail.textContent = 'Format conversion complete!';
+                    } else {
+                        progressFill.style.width = '100%';
+                        progressDetail.textContent = 'Error converting format';
+                        progressFill.style.backgroundColor = '#e74c3c';
+                        alert('Error converting format');
+                    }
+                } catch (err) {
+                    progressFill.style.width = '100%';
+                    progressDetail.textContent = 'Error: ' + err.message;
+                    progressFill.style.backgroundColor = '#e74c3c';
+                    alert('Error: ' + err.message);
+                } finally {
+                    setTimeout(() => {
+                        progress.style.display = 'none';
+                        progressFill.style.width = '0%';
+                        progressFill.style.backgroundColor = '#3498db'; // Reset color
+                    }, 1000);
+                }
+            });
+            
+            // Copy buttons
+            copyYamlBtn.addEventListener('click', () => {
+                copyToClipboard(yamlOutput.textContent);
+            });
+            
+            copyConvertedBtn.addEventListener('click', () => {
+                copyToClipboard(convertedText.textContent);
+            });
+            
+            // Helper function to copy text to clipboard
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text)
+                    .then(() => alert('Copied to clipboard!'))
+                    .catch(err => alert('Failed to copy: ' + err));
+            }
+            
+            // Helper function to download text as a file
+            function downloadText(text, filename) {
+                const blob = new Blob([text], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Template for environment variables
+# Copy this file to .envrc and fill in your API keys
+export LLM_GEMINI_KEY=your_gemini_key_here
+export OPENAI_API_KEY=your_openai_key_here
+export HUGGINGFACE_API_TOKEN=your_huggingface_token_here
+export GEMINI_API_KEY=your_gemini_key_here

@@ -1,0 +1,25 @@
+ref_1:
+  type: web
+  title: "ATscale Strategy 2024-2027"
+  accessed: 2025-05-06
+  url: "https://atscalepartnership.org/s/ATscale-strategy-2024-2027.pdf"
+
+ref_2:
+  type: web
+  title: "Assistive technology"
+  author: World Health Organization (WHO)
+  url: https://www.who.int/news-room/fact-sheets/detail/assistive-technology
+  accessed: 2025-05-06
+
+ref_3:
+  type: web
+  title: "PRODUCT NARRATiVE: DiGiTAL ASSiSTiVE TECHNOLOGY - AT2030 Programme"
+  url: https://at2030.org/static/at2030_core/outputs/Product_Narrative_Digital_Assistive_Technology_a11y.pdf
+  accessed: 2025-05-06
+
+ref_4:
+  type: web
+  title: "Opportunities for digital assistive technology innovations in Africa and Asia"
+  author: GSMA
+  url: https://www.gsma.com/mobilefordevelopment/wp-content/uploads/2020/07/GSMA_ATInnovation-Landscape_28pp_FINAL_Accessible_WEB.pdf
+  accessed: 2025-05-06
