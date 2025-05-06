@@ -72,7 +72,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 model = None
 # List of models to try, in order of preference
 model_options = [
-    "gemini-2.0-flash-lite",  # Google's Gemini Flash (free free tier)
+    "gemma-3-27b-it",  # Google's Gemini Flash (free free tier)"gemini-2.0-flash-lite",  # Google's Gemini Flash (free free tier)
     "gemini-2.0-flash",  # Google's Gemini Pro
     "gpt-3.5-turbo",  # OpenAI's GPT-3.5 (cheaper than GPT-4)
     "gpt-4o",  # OpenAI's latest model
