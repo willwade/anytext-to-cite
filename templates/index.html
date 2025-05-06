@@ -85,7 +85,7 @@
 
         <div id="results" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
             <h2 class="text-xl font-semibold mb-4">Results</h2>
-            
+
             <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-lg font-medium">Hayagriva YAML</h3>
@@ -93,7 +93,7 @@
                 </div>
                 <pre id="yamlOutput" class="bg-gray-100 p-4 rounded-lg overflow-x-auto text-sm"></pre>
             </div>
-            
+
             <div id="citation-style-container" class="mb-4 hidden">
                 <label for="citation-style" class="block text-sm font-medium text-gray-700">Format references in citation style:</label>
                 <div class="flex items-center space-x-2">
@@ -106,7 +106,7 @@
                     </button>
                 </div>
             </div>
-            
+
             <div class="mb-6">
                 <label for="formatSelect" class="block text-sm font-medium text-gray-700 mb-1">Export as technical format:</label>
                 <div class="flex">
@@ -119,7 +119,7 @@
                     <button id="exportBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r">Export</button>
                 </div>
             </div>
-            
+
             <div id="convertedOutput" class="hidden">
                 <div class="flex justify-between items-center mb-2">
                     <h3 id="convertedFormatTitle" class="text-lg font-medium">Converted Format</h3>
@@ -138,28 +138,54 @@
             const yamlOutput = document.getElementById('yamlOutput');
             const outputArea = document.getElementById('outputArea');
             const convertedOutput = document.getElementById('convertedOutput');
-            
+
             // Progress elements
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const progressText = document.getElementById('progressText');
-            
+            const progress = document.getElementById('progress');
+            const progressFill = document.getElementById('progressFill');
+            const progressDetail = document.getElementById('progressDetail');
+
+            // Verify progress elements exist
+            console.log('Progress elements:', {
+                progress: progress ? 'Found' : 'Missing',
+                progressFill: progressFill ? 'Found' : 'Missing',
+                progressDetail: progressDetail ? 'Found' : 'Missing'
+            });
+
+            // Test direct DOM update
+            try {
+                setTimeout(() => {
+                    console.log('Testing direct DOM update...');
+                    const testElement = document.getElementById('progressDetail');
+                    if (testElement) {
+                        const testMessage = 'TEST UPDATE: ' + new Date().toISOString();
+                        testElement.textContent = testMessage;
+                        console.log('Test update set to:', testMessage);
+                        console.log('Element now contains:', testElement.textContent);
+                    } else {
+                        console.error('Test update failed - could not find progressDetail element');
+                    }
+                }, 2000);
+            } catch (e) {
+                console.error('Error in test update:', e);
+            }
+
             // Format and export elements
             const formatSelect = document.getElementById('formatSelect');
             const exportBtn = document.getElementById('exportBtn');
             const copyYamlBtn = document.getElementById('copyYamlBtn');
             const copyConvertedBtn = document.getElementById('copyConvertedBtn');
-            
+
             // Citation style elements
             const citationStyleContainer = document.getElementById('citation-style-container');
             const citationStyleSelect = document.getElementById('citation-style');
             const formatStyleBtn = document.getElementById('format-btn');
-            
+
             // Progress tracking variables
             let progressInterval = null;
             let taskId = null;
             let yamlContent = null;
-            
+            let isProcessing = false; // Flag to track if processing is active
+
             // Function to load available citation styles
             function loadCitationStyles() {
                 fetch('/api/citation-styles')
@@ -169,7 +195,7 @@
                         while (citationStyleSelect.options.length > 1) {
                             citationStyleSelect.remove(1);
                         }
-                        
+
                         // Add new options
                         data.styles.forEach(style => {
                             const option = document.createElement('option');
@@ -182,7 +208,7 @@
                         console.error('Error loading citation styles:', error);
                     });
             }
-            
+
             // Function to format references in selected citation style
             function formatReferences() {
                 const style = citationStyleSelect.value;
@@ -190,11 +216,11 @@
                     alert('Please select a citation style and ensure YAML content is available');
                     return;
                 }
-                
+
                 // Show loading state
                 formatStyleBtn.disabled = true;
                 formatStyleBtn.textContent = 'Formatting...';
-                
+
                 fetch('/api/format-references', {
                     method: 'POST',
                     headers: {
@@ -225,10 +251,10 @@
                     formatStyleBtn.textContent = 'Format';
                 });
             }
-            
+
             // Add event listener for the format button
             formatStyleBtn.addEventListener('click', formatReferences);
-            
+
             // Function to update progress UI
             function updateProgressUI(progressData) {
                 // Calculate percentage
@@ -236,37 +262,77 @@
                 if (progressData.total > 0) {
                     percent = Math.round((progressData.current / progressData.total) * 100);
                 }
-                
+
+                // Ensure percent is at least 5% for visibility
+                percent = Math.max(5, percent);
+
                 // Update UI elements
                 progressFill.style.width = `${percent}%`;
-                
+
                 // Make sure progress message is clearly displayed
-                const message = progressData.message || 
-                    `Processing ${progressData.current} of ${progressData.total} citations`;
-                progressDetail.textContent = message;
-                
+                let message = '';
+                if (progressData.message) {
+                    message = progressData.message;
+                    console.log('Using message from progressData:', message);
+                } else {
+                    message = `Processing ${progressData.current} of ${progressData.total} citations`;
+                    console.log('Using default message format with:', progressData.current, progressData.total);
+                }
+                console.log('Setting progressDetail.textContent to:', message);
+
+                // Try multiple approaches to update the text
+                try {
+                    // Approach 1: Direct textContent update
+                    progressDetail.textContent = message;
+
+                    // Approach 2: innerHTML update
+                    progressDetail.innerHTML = message;
+
+                    // Approach 3: Replace the element
+                    const parent = progressDetail.parentNode;
+                    if (parent) {
+                        const newElement = document.createElement('div');
+                        newElement.id = 'progressDetail';
+                        newElement.className = 'progress-detail';
+                        newElement.textContent = message;
+                        parent.replaceChild(newElement, progressDetail);
+                        // Update our reference
+                        progressDetail = newElement;
+                    }
+
+                    // Force a DOM update by accessing offsetHeight
+                    progressDetail.offsetHeight;
+
+                    console.log('After update, progressDetail.textContent =', progressDetail.textContent);
+                } catch (e) {
+                    console.error('Error updating progress text:', e);
+                }
+
                 // Log for debugging
-                console.log('Progress update:', progressData, 'Element:', progressDetail, 'Message:', message);
-                
+                console.log('Progress update:', progressData, 'Element:', progressDetail, 'Message:', message, 'Percent:', percent);
+
                 // Force the progress to be visible
                 progress.style.display = 'block';
-                
-                // If complete, stop polling
-                if (progressData.status === 'complete') {
-                    clearInterval(progressInterval);
-                    isProcessing = false;
-                }
+                progress.classList.remove('hidden');
+
+                // Note: Complete status is now handled in the polling function
             }
-            
+
             // Variables for backoff strategy
             let retryCount = 0;
             const maxRetries = 5;
             const baseDelay = 1000; // 1 second base delay
-            
+
             // Function to poll progress with exponential backoff
             function pollProgress() {
+                if (!isProcessing) {
+                    console.log('Polling stopped because isProcessing is false');
+                    return;
+                }
+
+                console.log('Polling progress, isProcessing =', isProcessing);
                 // Simple fetch without timeout to avoid AbortError
-                fetch('/api/progress', { 
+                fetch('/api/progress', {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
@@ -284,31 +350,93 @@
                 .then(progressData => {
                     // Only update if we have valid data
                     if (progressData && typeof progressData === 'object') {
+                        console.log('Progress data received:', progressData);
+
+                        // DIRECT UPDATE: Bypass the updateProgressUI function
+                        try {
+                            // Calculate percentage
+                            let percent = 0;
+                            if (progressData.total > 0) {
+                                percent = Math.round((progressData.current / progressData.total) * 100);
+                            }
+
+                            // Ensure percent is at least 5% for visibility
+                            percent = Math.max(5, percent);
+
+                            // Direct DOM updates
+                            document.getElementById('progressFill').style.width = `${percent}%`;
+
+                            // Create message
+                            const message = progressData.message ||
+                                `Processing ${progressData.current} of ${progressData.total} citations`;
+
+                            // Try multiple ways to update the text
+                            const detailElement = document.getElementById('progressDetail');
+                            if (detailElement) {
+                                detailElement.textContent = message;
+                                detailElement.innerHTML = message;
+                                console.log('DIRECT UPDATE - Set text to:', message);
+                                console.log('DIRECT UPDATE - Element now contains:', detailElement.textContent);
+                            } else {
+                                console.error('DIRECT UPDATE - Could not find progressDetail element');
+                            }
+
+                            // Also update the original reference
+                            if (progressDetail) {
+                                progressDetail.textContent = message;
+                                progressDetail.innerHTML = message;
+                            }
+
+                            // Force the progress to be visible
+                            const progressElement = document.getElementById('progress');
+                            if (progressElement) {
+                                progressElement.style.display = 'block';
+                                progressElement.classList.remove('hidden');
+                            }
+                        } catch (e) {
+                            console.error('DIRECT UPDATE - Error updating progress:', e);
+                        }
+
+                        // Also try the normal update function
                         updateProgressUI(progressData);
-                        
+
                         // If processing is complete, stop polling
                         if (progressData.status === 'complete') {
+                            console.log('Processing complete, stopping polling');
                             clearInterval(progressInterval);
+                            progressInterval = null;
                             isProcessing = false;
+
+                            // Clear any other intervals that might be running
+                            if (window.simpleInterval) {
+                                clearInterval(window.simpleInterval);
+                            }
+
+                            // Set to 100% when complete
+                            document.getElementById('progressFill').style.width = '100%';
+                            document.getElementById('progressDetail').textContent =
+                                `Complete! Processed ${progressData.total} citations.`;
                         }
+                    } else {
+                        console.warn('Invalid progress data received:', progressData);
                     }
                 })
                 .catch(error => {
                     // Implement exponential backoff
                     retryCount++;
-                    
+
                     // Calculate delay with exponential backoff
                     const delay = Math.min(baseDelay * Math.pow(2, retryCount), 10000); // Max 10 seconds
-                    
+
                     // Update UI with a waiting message
                     const progressDetail = document.getElementById('progressDetail');
                     if (progressDetail) {
                         progressDetail.textContent = `Processing citations... (retrying in ${delay/1000}s)`;
                     }
-                    
+
                     // Clear existing interval
                     clearInterval(progressInterval);
-                    
+
                     // Only retry if we haven't exceeded max retries
                     if (retryCount <= maxRetries && isProcessing) {
                         console.log(`Retry ${retryCount}/${maxRetries} in ${delay}ms`);
@@ -327,13 +455,13 @@
                 if (file) {
                     const formData = new FormData();
                     formData.append('file', file);
-                    
+
                     try {
                         const response = await fetch('/upload', {
                             method: 'POST',
                             body: formData
                         });
-                        
+
                         if (response.ok) {
                             const data = await response.json();
                             inputText.value = data.content;
@@ -345,7 +473,7 @@
                     }
                 }
             });
-            
+
             // Handle convert button
             convertBtn.addEventListener('click', async () => {
                 const text = inputText.value.trim();
@@ -353,31 +481,92 @@
                     alert('Please enter some text or upload a file');
                     return;
                 }
-                
+
                 // Show progress indicator
                 progress.style.display = 'block';
                 progressFill.style.width = '10%';
                 progressDetail.textContent = 'Sending request to server...';
                 results.classList.add('hidden');
-                
+
                 try {
                     console.log('Sending text to API:', text);
-                    
+
                     // Start polling progress
                     isProcessing = true;
                     retryCount = 0; // Reset retry count
                     clearInterval(progressInterval); // Clear any existing interval
+
                     // Start polling immediately
                     pollProgress();
-                    
+
+                    // Use a recursive setTimeout approach instead of setInterval for more reliable polling
+                    function setupPolling() {
+                        if (isProcessing) {
+                            setTimeout(() => {
+                                pollProgress();
+                                setupPolling(); // Set up the next poll
+                            }, 500);
+                        }
+                    }
+
+                    // Start the polling chain
+                    setupPolling();
+
                     // Initial progress state
                     progressFill.style.width = '5%';
                     progressDetail.textContent = 'Starting conversion process...';
-                    
+
+                    // Force a direct update of the progress UI with initial state
+                    updateProgressUI({
+                        current: 0,
+                        total: 0,
+                        status: 'starting',
+                        message: 'Starting conversion process...'
+                    });
+
+                    // Start a simple counter that updates the progress independently
+                    let simpleCounter = 0;
+                    // Store in window object so it can be accessed globally
+                    window.simpleInterval = setInterval(() => {
+                        simpleCounter++;
+                        // Create a message that shows both elapsed time and a fake progress percentage
+                        const fakeProgress = Math.min(95, Math.round(simpleCounter / 3)); // Max 95% to leave room for completion
+                        const counterMessage = `Processing... (${simpleCounter}s elapsed, ~${fakeProgress}%)`;
+                        console.log('Simple counter update:', counterMessage);
+
+                        // Also update the progress bar
+                        const progressFillElement = document.getElementById('progressFill');
+                        if (progressFillElement) {
+                            progressFillElement.style.width = `${fakeProgress}%`;
+                        }
+
+                        // Try direct DOM update
+                        try {
+                            const detailElement = document.getElementById('progressDetail');
+                            if (detailElement) {
+                                detailElement.textContent = counterMessage;
+                                console.log('Simple counter set text to:', counterMessage);
+                            }
+
+                            // Also update the original reference
+                            if (progressDetail) {
+                                progressDetail.textContent = counterMessage;
+                            }
+                        } catch (e) {
+                            console.error('Simple counter update error:', e);
+                        }
+
+                        // Stop after 5 minutes to prevent runaway counter
+                        if (simpleCounter > 300 || !isProcessing) {
+                            clearInterval(window.simpleInterval);
+                            window.simpleInterval = null;
+                        }
+                    }, 1000);
+
                     // Make sure progress is visible
                     progress.classList.remove('hidden');
                     progress.style.display = 'block';
-                    
+
                     const response = await fetch('/api/convert-to-hayagriva', {
                         method: 'POST',
                         headers: {
@@ -385,85 +574,96 @@
                         },
                         body: JSON.stringify({ text })
                     });
-                    
+
                     progressFill.style.width = '50%';
                     progressDetail.textContent = 'Processing server response...';
-                    
+
                     if (response.ok) {
                         progressFill.style.width = '80%';
                         progressDetail.textContent = 'Formatting results...';
-                        
+
                         const data = await response.json();
                         console.log('API response:', data);
                         yamlOutput.textContent = data.yaml;
-                        
+
                         // Make the results section visible
                         results.classList.remove('hidden');
-                        
+
                         // Store the YAML content for later use
                         yamlContent = data.yaml;
-                        
+
                         // Show citation style container and load styles
                         citationStyleContainer.classList.remove('hidden');
                         loadCitationStyles();
-                        
+
                         progressFill.style.width = '100%';
                         progressDetail.textContent = `Complete! Processed ${data.count || data.entries?.length || 0} citations.`;
-                        
+
+                        // Clear any intervals
+                        if (window.simpleInterval) {
+                            clearInterval(window.simpleInterval);
+                            window.simpleInterval = null;
+                        }
+
+                        // Make sure isProcessing is set to false
+                        isProcessing = false;
+
                         // Short delay to show the completed progress
                         await new Promise(resolve => setTimeout(resolve, 500));
                     } else {
                         progressFill.style.width = '100%';
                         progressDetail.textContent = 'Error occurred';
                         progressFill.style.backgroundColor = '#e74c3c';
-                        
+
                         const errorData = await response.json();
                         console.error('API error:', errorData);
                         alert('Error converting text: ' + (errorData.detail || 'Unknown error'));
                     }
                 } catch (err) {
-                    progressFill.style.width = '100%';
-                    progressDetail.textContent = 'Error: ' + err.message;
-                    progressFill.style.backgroundColor = '#e74c3c';
-                    
-                    console.error('Request error:', err);
-                    alert('Error: ' + err.message);
-                } finally {
-                    // Stop polling progress
-                    clearInterval(progressInterval);
+                    // Stop polling in case of error
                     isProcessing = false;
-                    
+
+                    // Clear any intervals
+                    if (window.simpleInterval) {
+                        clearInterval(window.simpleInterval);
+                        window.simpleInterval = null;
+                    }
+
                     // Complete the progress bar for visual feedback
                     progressFill.style.width = '100%';
-                    progressDetail.textContent = 'Completed';
-                    
+                    progressFill.style.backgroundColor = '#e74c3c'; // Red for error
+                    progressDetail.textContent = 'Error: ' + err.message;
+
+                    console.error('Request error:', err);
+                    alert('Error: ' + err.message);
+
                     // Short delay before hiding progress
                     setTimeout(() => {
                         progress.style.display = 'none';
-                    }, 500);
+                    }, 3000);
                 }
             });
-            
+
             // Handle export button
             exportBtn.addEventListener('click', async () => {
                 const format = formatSelect.value;
                 const yamlContent = yamlOutput.textContent;
-                
+
                 if (!yamlContent) {
                     alert('No YAML content to convert');
                     return;
                 }
-                
+
                 if (format === 'yaml') {
                     // Just download the YAML directly
                     downloadText(yamlContent, 'references.yaml');
                     return;
                 }
-                
+
                 progress.style.display = 'block';
                 progressFill.style.width = '30%';
                 progressDetail.textContent = 'Converting format...';
-                
+
                 try {
                     const response = await fetch('/api/convert-format', {
                         method: 'POST',
@@ -475,15 +675,15 @@
                             output_format: format
                         })
                     });
-                    
+
                     progressFill.style.width = '70%';
-                    
+
                     if (response.ok) {
                         const data = await response.json();
                         convertedText.textContent = data.converted_content;
                         convertedFormatTitle.textContent = `Converted to ${format.toUpperCase()}`;
                         convertedOutput.classList.remove('hidden');
-                        
+
                         progressFill.style.width = '100%';
                         progressDetail.textContent = 'Format conversion complete!';
                     } else {
@@ -505,23 +705,23 @@
                     }, 1000);
                 }
             });
-            
+
             // Copy buttons
             copyYamlBtn.addEventListener('click', () => {
                 copyToClipboard(yamlOutput.textContent);
             });
-            
+
             copyConvertedBtn.addEventListener('click', () => {
                 copyToClipboard(convertedText.textContent);
             });
-            
+
             // Helper function to copy text to clipboard
             function copyToClipboard(text) {
                 navigator.clipboard.writeText(text)
                     .then(() => alert('Copied to clipboard!'))
                     .catch(err => alert('Failed to copy: ' + err));
             }
-            
+
             // Helper function to download text as a file
             function downloadText(text, filename) {
                 const blob = new Blob([text], { type: 'text/plain' });

@@ -803,7 +803,9 @@ async def convert_to_hayagriva(input: TextInput):
             conversion_progress["message"] = (
                 f"Processing reference {current}/{total_refs}"
             )
+            # Print progress update for debugging
             print(f"Processing reference {current}/{total_refs}")
+            print(f"Progress data: {conversion_progress}")
 
             # Skip empty references
             if not ref.strip():
@@ -944,6 +946,12 @@ Provide ONLY the YAML output with the key, no explanations or other text."""
                 print("Attempted to fix YAML by removing duplicate keys")
             except Exception as fix_error:
                 print(f"Could not fix YAML: {str(fix_error)}")
+
+        # Mark progress as complete
+        conversion_progress["status"] = "complete"
+        conversion_progress["message"] = (
+            f"Completed processing {len(hayagriva_yaml_entries)} references"
+        )
 
         return {
             "entries": hayagriva_yaml_entries,
@@ -1172,6 +1180,8 @@ async def upload_file(file: UploadFile = File(...)):
 @app.get("/api/progress")
 async def get_progress():
     """Get the current progress of the conversion process"""
+    # Log the current progress data for debugging
+    print(f"Progress endpoint called, returning: {conversion_progress}")
     return conversion_progress
 
 
